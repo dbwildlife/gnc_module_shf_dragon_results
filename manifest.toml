@@ -1,0 +1,6 @@
+package_format_version = '1'
+module_name = 'gnc_shf_results'
+module_version = '1.0.0'
+min_geonature_version = '0.0.0'
+max_geonature_version = '0.0.0'
+api_url='/results'
