@@ -3,12 +3,10 @@
 
 
 from geoalchemy2 import Geometry
-from sqlalchemy import ForeignKey
-
 from server import db
-
-from utils_flask_sqla_geo.serializers import geoserializable, serializable
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import deferred
+from utils_flask_sqla_geo.serializers import geoserializable, serializable
 
 # @serializable
 # @geoserializable
@@ -42,7 +40,8 @@ class BibAreasTypes(db.Model):
     type_desc = db.Column(db.Unicode)
 
 
-@geoserializable
+@serializable
+@geoserializable(geoCol="geom", idCol="id_area")
 class LAreas(db.Model):
     """Table des zonages"""
 
@@ -55,3 +54,4 @@ class LAreas(db.Model):
     geom = db.Column(Geometry("GEOMETRY"))
     centroid = db.Column(Geometry("POINT"))
     geojson_4326 = deferred(db.Column(db.Unicode))
+    enable = db.Column(db.Boolean)
