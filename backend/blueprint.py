@@ -48,6 +48,7 @@ def get_areas():
 @blueprint.route("/synthesis/map", methods=["GET"])
 def get_map_synthesis():
     cd_nom = request.args.get("cd_nom")
+
     id_program = request.args.get("id_program")
     id_area = request.args.get("id_area")
     id_type = request.args.get("id_type", default=default_id_area_type)
@@ -68,9 +69,9 @@ def get_map_synthesis():
     if id_area:
         query = query.filter(LAreas.id_area == id_area)
     if cd_nom:
-        query.filter(ObservationModel.cd_nom == cd_nom)
+        query = query.filter(ObservationModel.cd_nom == cd_nom)
 
-    data = query.group_by(LAreas.id_area).values(
+    query = query.group_by(LAreas.id_area).values(
         LAreas.id_area,
         LAreas.area_name,
         LAreas.area_code,
@@ -80,8 +81,9 @@ def get_map_synthesis():
             "geometry"
         ),
     )
+
     geojson_features = []
-    for item in data:
+    for item in query:
         dict_item = item._asdict()
         geometry = json.loads(dict_item.pop("geometry"))
         id_area = dict_item.pop("id_area")
@@ -105,10 +107,6 @@ def get_chart_synthesis():
         break
     date_list = func.generate_series(data.min, data.max).alias("label")
     label = column("label")
-    # date_list = select(
-    #     func.generate_series(data.min, data.max).alias("name")
-    # ).subquery()
-    print(dir(date_list.columns))
     query = (
         db.session.query(
             label,
@@ -128,7 +126,6 @@ def get_chart_synthesis():
         query = query.filter(ObservationModel.id_program == id_program)
     if cd_nom:
         query = query.filter(ObservationModel.cd_nom == cd_nom)
-    print(type(query))
     return jsonify([item._asdict() for item in query.all()])
 
 
