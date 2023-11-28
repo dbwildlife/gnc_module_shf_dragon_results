@@ -119,15 +119,15 @@
 
   const loadMapData = (cd_nom) => {
     const getColor = (d) => {
-      return d > 100 ? '#800026' : d > 50 ? '#BD0026' : d > 20 ? '#E31A1C' : d > 10 ? '#FC4E2A' : d > 5 ? '#FD8D3C' : d > 2 ? '#FEB24C' : d > 1 ? '#FED976' : '#FFEDA0'
+      return d > 100 ? '#800026' : d > 50 ? '#BD0026' : d > 20 ? '#E31A1C' : d > 10 ? '#FC4E2A' : d > 5 ? '#FD8D3C' : d > 2 ? '#FEB24C' : d >= 1 ? '#FED976' : '#DDDDDD'
     }
     const style = (feature) => {
       return {
         fillColor: getColor(feature.properties.count_occtax),
-        weight: 2,
+        weight: 1,
         opacity: 1,
         color: 'white',
-        dashArray: '3',
+        dashArray: '0',
         fillOpacity: 0.7
       }
     }
