@@ -48,7 +48,7 @@ def get_areas():
 @blueprint.route("/synthesis/map", methods=["GET"])
 def get_map_synthesis():
     cd_nom = request.args.get("cd_nom")
-
+    # is_valid = request.args.get("is_valid", default=default_id_area_type)
     id_program = request.args.get("id_program")
     id_area = request.args.get("id_area")
     id_type = request.args.get("id_type", default=default_id_area_type)
