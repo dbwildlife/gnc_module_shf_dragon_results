@@ -74,7 +74,6 @@
   integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="https://d3js.org/d3.v6.js"></script>
 
 <script>
   // declare common variables
@@ -86,8 +85,9 @@
   let programDetails
   let title
   const baseApiUrl = location.origin
+  // const baseApiUrl = 'https://gncitizen.demo.targezed.net'
   const idAreaType = 34
-  const baseTaxhubApiUrl = '//geonature.demo.dbwildlife.info/taxhub/api'
+  const baseTaxhubApiUrl = 'https://geonature.demo.dbwildlife.info/taxhub/api'
 
   // INFO: Some app tools
 
@@ -102,6 +102,7 @@
     history.pushState(paramsObject, cdNom, `?${params}`);
   }
 
+  // Update document title
   const titleUpdate = () => {
     const taxon = taxaList.filter(e => e.cd_nom == cdNom)[0]
     console.log('titleUpdate', [title, taxon?.nom_francais].filter(i => i !== null))
