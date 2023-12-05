@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="fr" data-bs-theme="dark">
 
 <head>
   <meta charset="utf-8" />
@@ -49,33 +49,19 @@
 </head>
 
 <body class="d-flex flex-column vh-100">
-  <!-- <div id="header" class="container-fluid">
-    <div class="row">
-      <div class="col col-lg-12">
-        <div class="mb-3">
-          <label for="taxaSelect" class="form-label">Espèce ou groupe d'espèce</label>
-          <select class="form-select" aria-label="taxaSelect">
-            <option selected>Open this select menu</option>
-            <option value="1">One</option>
-            <option value="2">Two</option>
-            <option value="3">Three</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </div> -->
-
   <div class="d-flex h-100">
     <div class="container-fluid d-flex flex-column">
       <div class="row d-flex h-100">
         <div class="col-4 d-flex flex-column overflow-y h-100">
           <div>
-
-            <canvas id="chartJsBarChart" width="500px" height="300px" aria-label="bar Chart" role="img"></canvas>
+            <!-- Chart component -->
+            <canvas id="chartJsBarChart" width="500" height="300" aria-label="bar Chart" role="img"></canvas>
           </div>
+          <!-- Taxa list component -->
           <div id='taxaList' class="list-group h-100 overflow-auto" style="max-height: 100% !important;"></div>
         </div>
         <div class="col-8 px-0 align-items-stretch">
+          <!-- Map component -->
           <div id="map" class="custom-popup h-100">map</div>
         </div>
       </div>
@@ -92,19 +78,52 @@
 
 <script>
   // declare common variables
-  let map;
-  let cd_nom;
-  let areas;
-  let taxaList;
+  let map
+  let cd_nom
+  let areas
+  let taxaList
+  const baseApiUrl = '//localhost:5002'
+  const idProgram = 31
+  const idAreaType = 34
+  const baseTaxhubApiUrl = '//geonature.demo.dbwildlife.info/taxhub/api'
 
+  // INFO: Some app tools
+
+  // url Query strings cleaner > remove keys with null values
   const removeEmpty = (obj) => {
     return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v != null));
   }
+  // url Updated
+  const urlUpdate = (d) => {
+    const currentUrl = window.location.href;
+    console.log(currentUrl)
+  }
+
+  // species selector on list
+  const speciesSelector = (d) => {
+    document.querySelectorAll(`[data-id]`)?.forEach(element => element.classList.remove("active"))
+    if (d.getAttribute("data-id") === cd_nom) {
+      cd_nom = null;
+    } else {
+      cd_nom = d.getAttribute("data-id")
+      d.classList.add('active')
+    }
+    const paramsObject = removeEmpty({ cd_nom: cd_nom })
+    const params = new URLSearchParams(paramsObject)
+    history.pushState(paramsObject, cd_nom, `?${params}`);
+    genData(cd_nom);
+  }
+
+  // INFO: get species info (french name, scientific name, media urls, etc.)
   const initTaxaList = async () => {
-    const taxonDetailsUrl = 'https://gncitizen.demo.targezed.net/api/taxonomy/lists/1264/species'
+    const taxonDetailsUrl = `${baseApiUrl}/api/taxonomy/lists/1264/species`
     const taxonDetailsResponse = await fetch(taxonDetailsUrl)
     taxaList = await taxonDetailsResponse.json()
   }
+
+  // INFO: Map component
+
+  // init leaflet map
   const initMap = () => {
     map = L.map('map').setView([48.84435, 2.35588], 18)
     //tileLayerUrl='https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.{ext}'
@@ -117,7 +136,8 @@
     }).addTo(map)
   }
 
-  const loadMapData = (cd_nom) => {
+  // map data loading
+  const loadMapData = () => {
     const getColor = (d) => {
       return d > 100 ? '#800026' : d > 50 ? '#BD0026' : d > 20 ? '#E31A1C' : d > 10 ? '#FC4E2A' : d > 5 ? '#FD8D3C' : d > 2 ? '#FEB24C' : d >= 1 ? '#FED976' : '#DDDDDD'
     }
@@ -152,30 +172,23 @@
     }
 
     const onEachFeature = (feature, layer) => {
-      // layer.on({
-      //     mouseover: highlightFeature,
-      //     mouseout: resetHighlight,
-      //     click: zoomToFeature
-      // })
-      //const popupContent = `feature.properties.count`
       layer.bindPopup(
         `<h5>${feature.properties.area_name}</h5>
           <p>
             <dl>
-                <dt>Nombre de taxons</dt>
-                <dd>${feature.properties.count_taxa} taxons</dd>
-
-                <dt>Nombre de données</dt>
-                <dd>${feature.properties.count_occtax} observations</dd>
-              </dl>
-                                                                                  </ul>
+              <dt>Nombre de taxons</dt>
+              <dd>${feature.properties.count_taxa} taxons</dd>
+              <dt>Nombre de données</dt>
+              <dd>${feature.properties.count_occtax} observations</dd>
+            </dl>
           </p>`
       )
     }
 
+
     const getData = async () => {
-      const params = new URLSearchParams(removeEmpty({ cd_nom: cd_nom, id_type: 34 }))
-      const url = '/api/results/synthesis/map?' + params
+      const params = new URLSearchParams(removeEmpty({ cd_nom: cd_nom, id_type: idAreaType, id_program: idProgram }))
+      const url = `${baseApiUrl}/api/results/synthesis/map?${params}`
       const response = await fetch(url)
       const geojsonFeature = await response.json()
       if (areas) {
@@ -188,65 +201,8 @@
     getData()
   }
 
-  // // START D3 CHART
-  // const d3jsBarChart = (cd_nom) => {
-  //   // set the dimensions and margins of the graph
-  //   const margin = { top: 10, right: 30, bottom: 90, left: 40 },
-  //     width = 460 - margin.left - margin.right,
-  //     height = 450 - margin.top - margin.bottom
-
-  //   // append the svg object to the body of the page
-  //   const svg = d3
-  //     .select('#my_dataviz')
-  //     .append('svg')
-  //     .attr('width', width + margin.left + margin.right)
-  //     .attr('height', height + margin.top + margin.bottom)
-  //     .append('g')
-  //     .attr('transform', `translate(${margin.left},${margin.top})`)
-
-  //   // Parse the Data
-  //   d3.json('/api/results/synthesis/chart').then(function (data) {
-  //     // X axis
-  //     const x = d3
-  //       .scaleBand()
-  //       .range([0, width])
-  //       .domain(data.map((d) => d.label))
-  //       .padding(0.2)
-  //     svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x)).selectAll('text').attr('transform', 'translate(-10,0)rotate(-45)').style('text-anchor', 'end')
-
-  //     // Add Y axis
-  //     const y = d3
-  //       .scaleLinear()
-  //       .domain([0, d3.max(data.map((i) => i.count_occtax)) * 1.1])
-  //       .range([height, 0])
-  //     svg.append('g').call(d3.axisLeft(y))
-
-  //     // Bars
-  //     svg
-  //       .selectAll('mybar')
-  //       .data(data)
-  //       .join('rect')
-  //       .attr('x', (d) => x(d.label))
-  //       .attr('width', x.bandwidth())
-  //       .attr('fill', '#69b3a2')
-  //       // no bar at the beginning thus:
-  //       .attr('height', (d) => height - y(0)) // always equal to 0
-  //       .attr('y', (d) => y(0))
-
-  //     // Animation
-  //     svg
-  //       .selectAll('rect')
-  //       .transition()
-  //       .duration(800)
-  //       .attr('y', (d) => y(d.count_occtax))
-  //       .attr('height', (d) => height - y(d.count_occtax))
-  //       .delay((d, i) => {
-  //         return i * 100
-  //       })
-  //   })
-  // }
-
-  const chartJsBarChart = (cd_nom) => {
+  // INFO: Chart component
+  const chartJsBarChart = () => {
     const config = (items) => {
       return {
         type: 'bar',
@@ -268,7 +224,7 @@
     }
     const getData = async () => {
       const params = new URLSearchParams(removeEmpty({ cd_nom: cd_nom }))
-      const url = '/api/results/synthesis/chart?' + params
+      const url = `${baseApiUrl}/api/results/synthesis/chart?${params}`
       const response = await fetch(url)
       const jsonResp = await response.json()
       const tmpChart = Chart.getChart('chartJsBarChart');
@@ -281,10 +237,11 @@
     getData()
   }
 
+  // INFO: Species list component
   const genList = async () => {
     const div = document.getElementById('taxaList')
-    // const params = new URLSearchParams(removeEmpty({ cd_nom: cd_nom }))
-    const url = '/api/results/synthesis/list'
+    const params = new URLSearchParams(removeEmpty({ id_program: idProgram }))
+    const url = `${baseApiUrl}/api/results/synthesis/list?${params}`
 
     const response = await fetch(url)
     const jsonResp = await response.json()
@@ -293,15 +250,15 @@
     jsonResp.forEach(i => {
       const taxon = taxaList.filter(e => e.cd_nom == i.cd_nom)[0]
       const a = document.createElement('a')
-      a.setAttribute('class', 'list-group-item list-group-item-action flex-column align-items-start');
-      a.setAttribute('href', '#');
+      a.setAttribute('class', `list-group-item list-group-item-action flex-column align-items-start ${taxon.cd_nom === parseInt(cd_nom) ? 'active' : ''}`);
+      // a.setAttribute();
       a.setAttribute('data-id', taxon.cd_nom)
-      a.setAttribute('onclick', 'filterData(this);')
+      a.setAttribute('onclick', 'speciesSelector(this);')
 
       a.innerHTML = `
         <div class="d-flex">
   <div class="flex-shrink-0">
-    <img class="img-thumbnail" src="https://geonature.demo.dbwildlife.info/taxhub/api/tmedias/thumbnail/${taxon.medias[0]?.id_media}?h=80" width="80" height="80" alt="photo" loading="lazy" >
+    <img class="img-thumbnail" src="${baseTaxhubApiUrl}/tmedias/thumbnail/${taxon.medias[0]?.id_media}?h=80" width="80" height="80" alt="photo" loading="lazy" >
   </div>
   <div class="flex-grow-1 ms-3">
     <h5 class="mb-1">${taxon.nom_francais}</h5>
@@ -316,34 +273,26 @@
 
   }
 
-  const genData = (cd_nom) => {
 
+  // INFO: map and chart data generator
+  const genData = (cd_nom) => {
     chartJsBarChart(cd_nom)
     loadMapData(cd_nom)
   }
 
-  function filterData(d) {
-    document.querySelectorAll(`[data-id]`)?.forEach(element => element.classList.remove("active"))
-    if (d.getAttribute("data-id") === cd_nom) {
-      cd_nom = null;
-    } else {
-      cd_nom = d.getAttribute("data-id")
-      d.classList.add('active')
-    }
 
-    genData(cd_nom);
-  }
-
+  // INFO: init first loading
   document.addEventListener('DOMContentLoaded', () => {
+    const url = new URL(window.location);
+    const searchParams = new URLSearchParams(url.search);
+    cd_nom = searchParams.get('cd_nom')
+    urlUpdate()
     initMap()
     initTaxaList().then(() => {
       genList()
-      genData(null)
+      genData()
     })
-
   })
-
-  // END D3 CHART
 </script>
 
 
