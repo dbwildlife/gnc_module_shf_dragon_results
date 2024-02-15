@@ -1,30 +1,50 @@
 import json
 
-from flask import Blueprint, jsonify, render_template, request
-from geoalchemy2 import func as geo_func
+from flask import Blueprint, current_app, jsonify, render_template, request
 from geojson import Feature, FeatureCollection
+from gncitizen.core.commons.models import ProgramsModel, TModules
 from gncitizen.core.observations.models import ObservationModel
 from gncitizen.core.taxonomy.models import Taxref
+from gncitizen.utils.env import API_TAXHUB, app_conf
 from server import db
-from sqlalchemy.sql.expression import column, distinct, func, select
+from sqlalchemy.sql.expression import and_, column, distinct, func
 from utils_flask_sqla.response import json_resp
-from utils_flask_sqla_geo.generic import get_geojson_feature
 
 from .ref_geo.models import BibAreasTypes, LAreas
 
 blueprint = Blueprint("results_url", __name__, template_folder="templates")
 
-default_id_area_type = (
-    BibAreasTypes.query.filter(BibAreasTypes.type_code == "REG").first()
-).id_type
-
 
 LAREAS_SRID = LAreas.query.first().geom.srid or 2154
+
+ID_OBS_MODULE = TModules.query.filter(TModules.name == "observations").first()
+
+DEFAULT_PROGRAM = current_app.config.get(
+    "RESULTS_DEFAULT_PROGRAM",
+    (
+        ProgramsModel.query.filter(
+            and_(ProgramsModel.is_active, ProgramsModel.module == ID_OBS_MODULE)
+        ).first()
+    ).id_program,
+)
+
+print(f"DEFAULT_PROGRAM {ID_OBS_MODULE} {DEFAULT_PROGRAM}")
+
+DEFAULT_AREA_TYPE = current_app.config.get("RESULTS_DEFAULT_AREA_TYPE", "DEP_SIMP")
+
+AREA_TYPE_ID = (
+    BibAreasTypes.query.filter(BibAreasTypes.type_code == DEFAULT_AREA_TYPE).first()
+).id_type
 
 
 @blueprint.route("/", methods=["GET"])
 def index():
-    return render_template("index.html")
+    return render_template(
+        "index.html",
+        api_taxhub=API_TAXHUB,
+        default_program=DEFAULT_PROGRAM,
+        area_type=AREA_TYPE_ID,
+    )
 
 
 @blueprint.route("/area_types/list", methods=["GET"])
@@ -35,7 +55,7 @@ def get_area_types():
 @blueprint.route("/areas/list", methods=["GET"])
 @json_resp
 def get_areas():
-    id_type = request.args.get("id_type", default=default_id_area_type)
+    id_type = request.args.get("id_type", default=AREA_TYPE_ID)
     query = LAreas.query.filter(LAreas.id_type == id_type)
     for item in query.all():
         print(dir(item))
@@ -48,16 +68,16 @@ def get_areas():
 @blueprint.route("/synthesis/map", methods=["GET"])
 def get_map_synthesis():
     cd_nom = request.args.get("cd_nom")
-    # is_valid = request.args.get("is_valid", default=default_id_area_type)
+    # is_valid = request.args.get("is_valid", default=AREA_TYPE_ID)
     id_program = request.args.get("id_program")
     id_area = request.args.get("id_area")
-    id_type = request.args.get("id_type", default=default_id_area_type)
+    id_type = request.args.get("id_type", default=AREA_TYPE_ID)
     query = (
         LAreas.query.filter(LAreas.id_type == id_type)
         .outerjoin(
             ObservationModel,
             LAreas.geom.st_intersects(
-                geo_func.ST_Transform(ObservationModel.geom, LAREAS_SRID)
+                func.ST_Transform(ObservationModel.geom, LAREAS_SRID)
             ),
         )
         .outerjoin(Taxref, ObservationModel.cd_nom == Taxref.cd_nom)
@@ -77,9 +97,7 @@ def get_map_synthesis():
         LAreas.area_code,
         func.count(distinct(ObservationModel.cd_nom)).label("count_taxa"),
         func.count(ObservationModel.id_observation).label("count_occtax"),
-        geo_func.st_asgeojson(geo_func.st_transform(LAreas.geom, 4326)).label(
-            "geometry"
-        ),
+        func.st_asgeojson(func.st_transform(LAreas.geom, 4326)).label("geometry"),
     )
 
     geojson_features = []
