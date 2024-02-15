@@ -88,7 +88,7 @@ def get_map_synthesis():
             ),
         )
         .outerjoin(Taxref, ObservationModel.cd_nom == Taxref.cd_nom)
-        .filter(LAreas.enable)
+        # .filter(LAreas.enable)
     )
 
     if id_program:
