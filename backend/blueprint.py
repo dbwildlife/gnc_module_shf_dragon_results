@@ -39,11 +39,18 @@ AREA_TYPE_ID = (
 
 @blueprint.route("/", methods=["GET"])
 def index():
+    id_program = request.args.get("id_program")
+    taxonomy_list: int = 100
+    if id_program:
+        taxonomy_list = (
+            ProgramsModel.query.filter(ProgramsModel.id_program == id_program).first()
+        ).taxonomy_list
     return render_template(
         "index.html",
         api_taxhub=API_TAXHUB,
         default_program=DEFAULT_PROGRAM,
         area_type=AREA_TYPE_ID,
+        taxonomy_list=taxonomy_list,
     )
 
 

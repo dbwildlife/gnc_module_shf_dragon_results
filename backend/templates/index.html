@@ -99,7 +99,13 @@
   const urlUpdate = () => {
     const paramsObject = removeEmpty({ cd_nom: cdNom, id_program: idProgram })
     const params = new URLSearchParams(paramsObject)
-    history.pushState(paramsObject, cdNom, `?${params}`);
+    const currentParams =  new URLSearchParams(location.search)
+    console.log('URLUPDATE', currentParams, !currentParams.has('id_program'))
+    if (!currentParams.has('id_program')) {
+      location.search = params;
+    }
+    
+    //history.pushState(paramsObject, cdNom, `?${params}`);
   }
 
   // Update document title
@@ -125,7 +131,7 @@
 
   // INFO: get species info (french name, scientific name, media urls, etc.)
   const initTaxaList = async () => {
-    const taxonDetailsUrl = `${baseApiUrl}/api/taxonomy/lists/1264/species`
+    const taxonDetailsUrl = `${baseApiUrl}/api/taxonomy/lists/{{taxonomy_list}}/species`
     const taxonDetailsResponse = await fetch(taxonDetailsUrl)
     taxaList = await taxonDetailsResponse.json()
   }
