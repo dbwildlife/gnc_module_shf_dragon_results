@@ -292,8 +292,14 @@
     const jsonResp = await response.json()
 
     const a = document.createElement('a')
+    jsonResp.sort((a, b) => { 
+      const taxon_a = taxaList.filter(e => e.cd_nom == a.cd_nom)[0]
+      const taxon_b = taxaList.filter(e => e.cd_nom == b.cd_nom)[0]
+      return taxon_a.nom_francais.localeCompare(taxon_b.nom_francais);
+    })
     jsonResp.forEach(i => {
       const taxon = taxaList.filter(e => e.cd_nom == i.cd_nom)[0]
+      console.log(taxon.nom_francais)
       const a = document.createElement('a')
       a.setAttribute('class', `list-group-item list-group-item-action flex-column align-items-start ${taxon.cd_nom === parseInt(cdNom) ? 'active' : ''}`);
       // a.setAttribute();
