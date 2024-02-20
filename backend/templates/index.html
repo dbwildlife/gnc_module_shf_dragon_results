@@ -293,7 +293,9 @@
 
     const a = document.createElement('a')
     jsonResp.sort((a, b) => { 
-      return (a.nom_vern || a.lb_nom).localeCompare(a.nom_vern || a.lb_nom);
+      const tax_a = a.nom_vern ? a.nom_vern : a.lb_nom;
+      const tax_b = b.nom_vern ? b.nom_vern : b.lb_nom;
+      return tax_a.localeCompare(tax_b);
     })
     jsonResp.forEach(i => {
       const taxon = taxaList.filter(e => e.cd_nom == i.cd_nom)[0]
