@@ -1,3 +1,4 @@
+import datetime
 import json
 
 from flask import Blueprint, current_app, jsonify, render_template, request
@@ -6,6 +7,7 @@ from gncitizen.core.commons.models import ProgramsModel, TModules
 from gncitizen.core.observations.models import ObservationModel
 from gncitizen.core.taxonomy.models import Taxref
 from gncitizen.utils.env import API_TAXHUB, app_conf
+from gncitizen.utils.helpers import get_filter_by_args
 from server import db
 from sqlalchemy.sql.expression import and_, column, distinct, func
 from utils_flask_sqla.response import json_resp
@@ -43,7 +45,9 @@ def index():
     taxonomy_list: int = 100
     if id_program:
         taxonomy_list = (
-            ProgramsModel.query.filter(ProgramsModel.id_program == id_program).first()
+            ProgramsModel.query.filter(
+                *get_filter_by_args(ProgramsModel, request.args)
+            ).first()
         ).taxonomy_list
     return render_template(
         "index.html",
@@ -74,11 +78,20 @@ def get_areas():
 
 @blueprint.route("/synthesis/map", methods=["GET"])
 def get_map_synthesis():
+    # obs_args = {key: args[key] for key in ["id_observation", "cd_nom"] if key in args}
+    # validation_args = {
+    #     key: args[key] for key in args.keys() if key.startswith("date") if key in args
+    # }
+    # obs_args = {**obs_args, **validation_args}
+
+    start_year = datetime.date.today().year - 20
     cd_nom = request.args.get("cd_nom")
     # is_valid = request.args.get("is_valid", default=AREA_TYPE_ID)
     id_program = request.args.get("id_program")
     id_area = request.args.get("id_area")
     id_type = request.args.get("id_type", default=AREA_TYPE_ID)
+
+    # last_n_years=
     query = (
         LAreas.query.filter(LAreas.id_type == id_type)
         .outerjoin(
@@ -98,13 +111,17 @@ def get_map_synthesis():
     if cd_nom:
         query = query.filter(ObservationModel.cd_nom == cd_nom)
 
-    query = query.group_by(LAreas.id_area).values(
-        LAreas.id_area,
-        LAreas.area_name,
-        LAreas.area_code,
-        func.count(distinct(ObservationModel.cd_nom)).label("count_taxa"),
-        func.count(ObservationModel.id_observation).label("count_occtax"),
-        func.st_asgeojson(func.st_transform(LAreas.geom, 4326)).label("geometry"),
+    query = (
+        query.filter(func.extract("year", ObservationModel.date) >= start_year)
+        .group_by(LAreas.id_area)
+        .values(
+            LAreas.id_area,
+            LAreas.area_name,
+            LAreas.area_code,
+            func.count(distinct(ObservationModel.cd_nom)).label("count_taxa"),
+            func.count(ObservationModel.id_observation).label("count_occtax"),
+            func.st_asgeojson(func.st_transform(LAreas.geom, 4326)).label("geometry"),
+        )
     )
 
     geojson_features = []
@@ -119,10 +136,13 @@ def get_map_synthesis():
 
 @blueprint.route("/synthesis/chart", methods=["GET"])
 def get_chart_synthesis():
+    start_year = datetime.date.today().year - 20
     cd_nom = request.args.get("cd_nom")
     id_program = request.args.get("id_program")
 
-    delta = ObservationModel.query.values(
+    delta = ObservationModel.query.filter(
+        func.extract("year", ObservationModel.date) >= start_year
+    ).values(
         func.min(func.extract("year", ObservationModel.date)).label("min"),
         func.max(func.extract("year", ObservationModel.date)).label("max"),
     )
@@ -143,6 +163,7 @@ def get_chart_synthesis():
             ObservationModel,
             label == func.extract("year", ObservationModel.date),
         )
+        .filter(func.extract("year", ObservationModel.date) >= start_year)
         .group_by(label)
         .order_by(label)
     )
@@ -156,6 +177,7 @@ def get_chart_synthesis():
 
 @blueprint.route("/synthesis/list", methods=["GET"])
 def getList():
+    start_year = datetime.date.today().year - 20
     cd_nom = request.args.get("cd_nom")
     id_program = request.args.get("id_program")
 
@@ -167,6 +189,7 @@ def getList():
             func.count(ObservationModel.id_observation).label("count_occtax"),
             func.max(ObservationModel.date).label("last_data"),
         )
+        .filter(func.extract("year", ObservationModel.date) >= start_year)
         .join(Taxref, Taxref.cd_nom == ObservationModel.cd_nom)
         .group_by(ObservationModel.cd_nom, Taxref.lb_nom, Taxref.nom_vern)
         .order_by(func.count(ObservationModel.id_observation).desc())
